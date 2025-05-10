@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alberto's Pizza - Staff Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #d84315;
+            --primary-dark: #bf360c;
+            --secondary: #ff6e40;
+            --dark: #1a1a1a;
+            --light: #f8f9fa;
+        }
+        body {
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            background-image: linear-gradient(135deg, rgba(216, 67, 21, 0.1) 0%, rgba(255, 110, 64, 0.1) 100%);
+        }
+        .login-container {
+            max-width: 450px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .brand-logo {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: none;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+        .form-control:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 0.25rem rgba(255, 110, 64, 0.25);
+        }
+        .form-label {
+            font-weight: 500;
+            color: #444;
+        }
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            padding: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .alert {
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+        }
+        .input-group-text {
+            background-color: transparent;
+            border-left: none;
+            cursor: pointer;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #777;
+        }
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .divider::before {
+            margin-right: 10px;
+        }
+        .divider::after {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="brand-logo">
+                    <i class="fas fa-pizza-slice"></i>
+                </div>
+                <h2>Alberto's Pizza</h2>
+                <p class="text-muted">Staff & Admin Portal</p>
+            </div>
+            
+            {% if messages %}
+            <div class="alert alert-danger">
+                {% for message in messages %}
+                    <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label for="username" class="form-label">Username</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required>
+                        <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                        <span class="input-group-text" onclick="togglePassword()"><i id="password-toggle" class="fas fa-eye-slash"></i></span>
+                    </div>
+                </div>
+                <div class="d-grid mb-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>Log In
+                    </button>
+                </div>
+                <div class="divider">Secure Login</div>
+                <p class="text-center text-muted small">This portal is restricted to authorized staff only.</p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const passwordToggle = document.getElementById('password-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordToggle.classList.replace('fa-eye-slash', 'fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                passwordToggle.classList.replace('fa-eye', 'fa-eye-slash');
+            }
+        }
+    </script>
+</body>
+</html> 
