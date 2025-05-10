@@ -156,6 +156,12 @@
                 passwordToggle.classList.replace('fa-eye', 'fa-eye-slash');
             }
         }
+        
+        // Clear form fields when the page loads (after unsuccessful login)
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        });
     </script>
 </body>
 </html> 

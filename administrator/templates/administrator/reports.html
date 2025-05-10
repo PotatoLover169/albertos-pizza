@@ -1,0 +1,381 @@
+{% extends 'administrator/base.html' %}
+
+{% block title %}Reports - Alberto's Pizza{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .chart-container {
+        position: relative;
+        height: 350px;
+    }
+    .stat-card {
+        border-left: 5px solid;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+    .stat-card.sales {
+        border-color: var(--primary);
+    }
+    .stat-card.orders {
+        border-color: var(--secondary);
+    }
+    .stat-card.aov {
+        border-color: #28a745;
+    }
+    .filter-group {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Reports</h4>
+
+<form method="get" class="filter-group">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="start_date" class="form-label">Start Date</label>
+            <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-4">
+            <label for="end_date" class="form-label">End Date</label>
+            <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-filter me-2"></i> Apply Filter
+            </button>
+        </div>
+    </div>
+</form>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 stat-card sales">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2 text-muted">Total Sales</h6>
+                        <h3 class="card-title">${{ total_sales|floatformat:2 }}</h3>
+                    </div>
+                    <div class="display-4 text-primary opacity-25">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+                <p class="card-text">
+                    <small class="text-muted">
+                        {% if prev_period_sales %}
+                            {% if sales_growth > 0 %}
+                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ sales_growth|floatformat:1 }}%</span>
+                            {% elif sales_growth < 0 %}
+                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ sales_growth|floatformat:1 }}%</span>
+                            {% else %}
+                                <span>No change</span>
+                            {% endif %}
+                            vs previous period
+                        {% endif %}
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 stat-card orders">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2 text-muted">Total Orders</h6>
+                        <h3 class="card-title">{{ total_orders }}</h3>
+                    </div>
+                    <div class="display-4 text-secondary opacity-25">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                </div>
+                <p class="card-text">
+                    <small class="text-muted">
+                        {% if prev_period_orders %}
+                            {% if orders_growth > 0 %}
+                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ orders_growth|floatformat:1 }}%</span>
+                            {% elif orders_growth < 0 %}
+                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ orders_growth|floatformat:1 }}%</span>
+                            {% else %}
+                                <span>No change</span>
+                            {% endif %}
+                            vs previous period
+                        {% endif %}
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 stat-card aov">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-subtitle mb-2 text-muted">Average Order Value</h6>
+                        <h3 class="card-title">${{ avg_order_value|floatformat:2 }}</h3>
+                    </div>
+                    <div class="display-4 text-success opacity-25">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <p class="card-text">
+                    <small class="text-muted">
+                        {% if prev_period_aov %}
+                            {% if aov_growth > 0 %}
+                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ aov_growth|floatformat:1 }}%</span>
+                            {% elif aov_growth < 0 %}
+                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ aov_growth|floatformat:1 }}%</span>
+                            {% else %}
+                                <span>No change</span>
+                            {% endif %}
+                            vs previous period
+                        {% endif %}
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Daily Sales</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Orders by Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="orderStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Top Menu Items</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Menu Item</th>
+                                <th>Orders</th>
+                                <th>Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in top_items %}
+                            <tr>
+                                <td>{{ item.menu_item__name }}</td>
+                                <td>{{ item.total_orders }}</td>
+                                <td>${{ item.total_revenue|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">No data available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Revenue by Category</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Daily Sales Report</h6>
+        <button class="btn btn-sm btn-outline-primary" id="downloadReportBtn">
+            <i class="fas fa-download me-1"></i> Download Report
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Orders</th>
+                        <th>Sales</th>
+                        <th>Avg. Order Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_sales %}
+                    <tr>
+                        <td>{{ day.date|date:"M d, Y" }}</td>
+                        <td>{{ day.total_orders }}</td>
+                        <td>${{ day.total_sales|floatformat:2 }}</td>
+                        <td>${{ day.average_order_value|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No data available</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize date pickers
+        flatpickr("#start_date", {
+            dateFormat: "Y-m-d"
+        });
+        
+        flatpickr("#end_date", {
+            dateFormat: "Y-m-d"
+        });
+        
+        // Sales chart
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: {{ date_labels|safe }},
+                datasets: [{
+                    label: 'Sales ($)',
+                    data: {{ sales_data|safe }},
+                    borderColor: '#d84315',
+                    backgroundColor: 'rgba(216, 67, 21, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Order status chart
+        const statusCtx = document.getElementById('orderStatusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ status_labels|safe }},
+                datasets: [{
+                    data: {{ status_data|safe }},
+                    backgroundColor: [
+                        '#ffc107', // pending
+                        '#007bff', // preparing
+                        '#17a2b8', // out for delivery
+                        '#28a745', // delivered
+                        '#dc3545'  // cancelled
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Category chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ category_labels|safe }},
+                datasets: [{
+                    data: {{ category_data|safe }},
+                    backgroundColor: [
+                        '#d84315',
+                        '#ff6e40',
+                        '#bf360c',
+                        '#ff9e80',
+                        '#dd2c00',
+                        '#ffccbc'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Download report function
+        document.getElementById('downloadReportBtn').addEventListener('click', function() {
+            window.print();
+        });
+    });
+</script>
+{% endblock %} 

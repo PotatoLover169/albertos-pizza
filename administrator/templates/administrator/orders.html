@@ -1,0 +1,191 @@
+{% extends 'administrator/base.html' %}
+
+{% block title %}Orders - Alberto's Pizza{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">Orders</h4>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Order List</span>
+        <div class="btn-group">
+            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-filter me-1"></i> Filter
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item filter-item" href="#" data-status="all">All Orders</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item filter-item" href="#" data-status="pending">Pending</a></li>
+                <li><a class="dropdown-item filter-item" href="#" data-status="preparing">Preparing</a></li>
+                <li><a class="dropdown-item filter-item" href="#" data-status="out_for_delivery">Out for Delivery</a></li>
+                <li><a class="dropdown-item filter-item" href="#" data-status="delivered">Delivered</a></li>
+                <li><a class="dropdown-item filter-item" href="#" data-status="cancelled">Cancelled</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <div class="row g-2 mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search orders...">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-light">From</span>
+                    <input type="date" id="dateFrom" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-light">To</span>
+                    <input type="date" id="dateTo" class="form-control">
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr data-status="{{ order.status }}">
+                        <td><a href="{% url 'order_detail' order.id %}" class="fw-bold text-decoration-none">{{ order.order_number }}</a></td>
+                        <td>{{ order.customer.name }}</td>
+                        <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
+                        <td>${{ order.total_price }}</td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                {% if order.payment_method == 'cash' %}
+                                    Cash
+                                {% elif order.payment_method == 'card' %}
+                                    Card
+                                {% else %}
+                                    Online
+                                {% endif %}
+                            </span>
+                            <span class="badge {% if order.is_paid %}bg-success{% else %}bg-warning{% endif %}">
+                                {% if order.is_paid %}Paid{% else %}Unpaid{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if order.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% elif order.status == 'preparing' %}
+                                <span class="badge bg-primary">Preparing</span>
+                            {% elif order.status == 'out_for_delivery' %}
+                                <span class="badge bg-info">Out for Delivery</span>
+                            {% elif order.status == 'delivered' %}
+                                <span class="badge bg-success">Delivered</span>
+                            {% elif order.status == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'order_detail' order.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header">Change Status</h6></li>
+                                    <li>
+                                        <form method="post" action="{% url 'update_order_status' order.id %}" class="px-2">
+                                            {% csrf_token %}
+                                            <div class="mb-2">
+                                                <select name="status" class="form-select form-select-sm">
+                                                    <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                                                    <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Preparing</option>
+                                                    <option value="out_for_delivery" {% if order.status == 'out_for_delivery' %}selected{% endif %}>Out for Delivery</option>
+                                                    <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Delivered</option>
+                                                    <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                                </select>
+                                            </div>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Update</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No orders found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Search functionality
+        $("#searchInput").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("table tbody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+        // Date filtering
+        function filterByDate() {
+            var dateFrom = $("#dateFrom").val();
+            var dateTo = $("#dateTo").val();
+            
+            if (!dateFrom && !dateTo) return;
+            
+            $("table tbody tr").each(function() {
+                var date = new Date($(this).find("td:eq(2)").text());
+                var dateString = date.toISOString().split('T')[0];
+                
+                var shouldShow = true;
+                if (dateFrom && dateString < dateFrom) shouldShow = false;
+                if (dateTo && dateString > dateTo) shouldShow = false;
+                
+                $(this).toggle(shouldShow);
+            });
+        }
+        
+        $("#dateFrom, #dateTo").on("change", filterByDate);
+        
+        // Status filtering
+        $(".filter-item").on("click", function(e) {
+            e.preventDefault();
+            var status = $(this).data("status");
+            
+            if (status === "all") {
+                $("table tbody tr").show();
+            } else {
+                $("table tbody tr").each(function() {
+                    $(this).toggle($(this).data("status") === status);
+                });
+            }
+        });
+    });
+</script>
+{% endblock %} 

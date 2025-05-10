@@ -1,0 +1,211 @@
+{% extends 'administrator/base.html' %}
+
+{% block title %}Order #{{ order.order_number }} - Alberto's Pizza{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4>Order #{{ order.order_number }}</h4>
+    <a href="{% url 'orders' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Orders
+    </a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Order Items</span>
+                {% if order.status != 'delivered' and order.status != 'cancelled' %}
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-print me-1"></i> Print
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="window.print()">Print Order</a></li>
+                            <li><a class="dropdown-item" href="#">Print Receipt</a></li>
+                            <li><a class="dropdown-item" href="#">Print Kitchen Ticket</a></li>
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Variant</th>
+                                <th>Qty</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order_items %}
+                            <tr>
+                                <td>{{ item.menu_item.name }}</td>
+                                <td>{% if item.variant %}{{ item.variant.name }}{% else %}Standard{% endif %}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td class="text-end">${{ item.price }}</td>
+                                <td class="text-end">${{ item.price|floatformat:2|default:0 }}</td>
+                            </tr>
+                            {% if item.special_instructions %}
+                            <tr>
+                                <td colspan="5" class="text-muted small py-0 px-3">
+                                    <em>Note: {{ item.special_instructions }}</em>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% for addon in item.addons.all %}
+                            <tr>
+                                <td class="ps-4 py-1">+ {{ addon.addon.name }}</td>
+                                <td></td>
+                                <td>{{ addon.quantity }}</td>
+                                <td class="text-end">${{ addon.price }}</td>
+                                <td class="text-end">${{ addon.price|floatformat:2|default:0 }}</td>
+                            </tr>
+                            {% endfor %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end">Subtotal:</td>
+                                <td class="text-end">${{ order.total_price }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="text-end">Delivery Fee:</td>
+                                <td class="text-end">$0.00</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="text-end">Tax:</td>
+                                <td class="text-end">$0.00</td>
+                            </tr>
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Total:</td>
+                                <td class="text-end fw-bold">${{ order.total_price }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                {% if order.special_instructions %}
+                <div class="alert alert-light mt-3">
+                    <strong>Special Instructions:</strong>
+                    <p class="mb-0">{{ order.special_instructions }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Order Status</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="d-block mb-2">Current Status:</span>
+                    <div>
+                        {% if order.status == 'pending' %}
+                            <div class="badge bg-warning py-2 px-3 w-100 text-start">
+                                <i class="fas fa-clock me-2"></i> Pending
+                            </div>
+                        {% elif order.status == 'preparing' %}
+                            <div class="badge bg-primary py-2 px-3 w-100 text-start">
+                                <i class="fas fa-utensils me-2"></i> Preparing
+                            </div>
+                        {% elif order.status == 'out_for_delivery' %}
+                            <div class="badge bg-info py-2 px-3 w-100 text-start">
+                                <i class="fas fa-motorcycle me-2"></i> Out for Delivery
+                            </div>
+                        {% elif order.status == 'delivered' %}
+                            <div class="badge bg-success py-2 px-3 w-100 text-start">
+                                <i class="fas fa-check-circle me-2"></i> Delivered
+                            </div>
+                        {% elif order.status == 'cancelled' %}
+                            <div class="badge bg-danger py-2 px-3 w-100 text-start">
+                                <i class="fas fa-times-circle me-2"></i> Cancelled
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'update_order_status' order.id %}" class="mb-3">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Update Status:</label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="preparing" {% if order.status == 'preparing' %}selected{% endif %}>Preparing</option>
+                            <option value="out_for_delivery" {% if order.status == 'out_for_delivery' %}selected{% endif %}>Out for Delivery</option>
+                            <option value="delivered" {% if order.status == 'delivered' %}selected{% endif %}>Delivered</option>
+                            <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save me-2"></i> Update Status
+                    </button>
+                </form>
+
+                <hr>
+                <div class="mb-2">
+                    <small class="text-muted">Order Date:</small>
+                    <div>{{ order.created_at|date:"F d, Y H:i A" }}</div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Payment Method:</small>
+                    <div>
+                        {% if order.payment_method == 'cash' %}
+                            <span><i class="fas fa-money-bill-wave me-1"></i> Cash on Delivery</span>
+                        {% elif order.payment_method == 'card' %}
+                            <span><i class="fas fa-credit-card me-1"></i> Credit/Debit Card</span>
+                        {% else %}
+                            <span><i class="fas fa-globe me-1"></i> Online Payment</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <small class="text-muted">Payment Status:</small>
+                    <div>
+                        {% if order.is_paid %}
+                            <span class="text-success"><i class="fas fa-check-circle me-1"></i> Paid</span>
+                        {% else %}
+                            <span class="text-warning"><i class="fas fa-exclamation-circle me-1"></i> Unpaid</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <span>Customer Information</span>
+            </div>
+            <div class="card-body">
+                <h6 class="mb-2">{{ order.customer.name }}</h6>
+                <div class="mb-1"><i class="fas fa-envelope me-2 text-muted"></i> {{ order.customer.email }}</div>
+                <div class="mb-3"><i class="fas fa-phone me-2 text-muted"></i> {{ order.customer.phone }}</div>
+                
+                <div class="mb-3">
+                    <span class="text-muted">Delivery Address:</span>
+                    <p class="mb-0">{{ order.delivery_address }}</p>
+                </div>
+                
+                <a href="{% url 'customer_detail' order.customer.id %}" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="fas fa-user me-2"></i> View Customer Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
